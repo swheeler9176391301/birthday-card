@@ -17,10 +17,10 @@ function localSave(data: Record<string, Card>) {
   writeFileSync(DB_PATH, JSON.stringify(data, null, 2))
 }
 
-// --- Vercel KV store (used when deployed) ---
+// --- Upstash Redis store (used when deployed) ---
 
-const KV_URL = process.env.KV_REST_API_URL
-const KV_TOKEN = process.env.KV_REST_API_TOKEN
+const KV_URL = process.env.UPSTASH_REDIS_REST_URL
+const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN
 const isDeployed = !!KV_URL && !!KV_TOKEN
 
 async function kvGet(key: string): Promise<Card | null> {
