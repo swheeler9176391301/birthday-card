@@ -24,6 +24,7 @@ export default function CardPage() {
   const [copied, setCopied] = useState(false)
   const [signError, setSignError] = useState("")
   const [notFound, setNotFound] = useState(false)
+  const [signing, setSigning] = useState(false)
 
   async function fetchCard() {
     const res = await fetch(`/api/cards/${id}`)
@@ -38,7 +39,8 @@ export default function CardPage() {
   }, [id])
 
   async function sign() {
-    if (!signer.trim() || !text.trim()) return
+    if (!signer.trim() || !text.trim() || signing) return
+    setSigning(true)
     setSignError("")
     const res = await fetch(`/api/cards/${id}/sign`, {
       method: "POST",
@@ -51,6 +53,7 @@ export default function CardPage() {
     } else {
       const data = await res.json()
       setSignError(data.error || "Something went wrong. Please try again.")
+      setSigning(false)
     }
   }
 
@@ -173,10 +176,11 @@ export default function CardPage() {
           {signError && <p className="text-red-500 text-sm">{signError}</p>}
           <button
             onClick={sign}
-            className="text-white font-bold py-2.5 rounded-xl transition-colors"
+            disabled={signing}
+            className="text-white font-bold py-2.5 rounded-xl transition-colors disabled:opacity-50"
             style={{ background: "linear-gradient(90deg, #e8445a, #f06292)" }}
           >
-            Sign Card 🎉
+            {signing ? "Signing..." : "Sign Card 🎉"}
           </button>
         </div>
       ) : (
