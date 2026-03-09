@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync } from "fs"
 import { join } from "path"
 
-type Message = { signer: string; text: string }
+type Message = { id: string; signer: string; text: string }
 export type Card = { recipientName: string; messages: Message[] }
 
 // --- Local file store (used when running on your computer) ---
@@ -59,14 +59,43 @@ export async function createCard(id: string, recipientName: string) {
 }
 
 export async function addMessage(id: string, signer: string, text: string) {
+  const msgId = Math.random().toString(36).slice(2, 9)
   if (isDeployed) {
     const card = await kvGet(id)
     if (!card) return
-    card.messages.push({ signer, text })
+    card.messages.push({ id: msgId, signer, text })
     await kvSet(id, card)
   } else {
     const data = localLoad()
-    data[id].messages.push({ signer, text })
+    data[id].messages.push({ id: msgId, signer, text })
+    localSave(data)
+  }
+}
+
+export async function deleteMessage(cardId: string, msgId: string) {
+  if (isDeployed) {
+    const card = await kvGet(cardId)
+    if (!card) return
+    card.messages = card.messages.filter((m) => m.id !== msgId)
+    await kvSet(cardId, card)
+  } else {
+    const data = localLoad()
+    data[cardId].messages = data[cardId].messages.filter((m) => m.id !== msgId)
+    localSave(data)
+  }
+}
+
+export async function editMessage(cardId: string, msgId: string, text: string) {
+  if (isDeployed) {
+    const card = await kvGet(cardId)
+    if (!card) return
+    const msg = card.messages.find((m) => m.id === msgId)
+    if (msg) msg.text = text
+    await kvSet(cardId, card)
+  } else {
+    const data = localLoad()
+    const msg = data[cardId].messages.find((m) => m.id === msgId)
+    if (msg) msg.text = text
     localSave(data)
   }
 }

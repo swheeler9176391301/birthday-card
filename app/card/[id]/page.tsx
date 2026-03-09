@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 
-type Message = { signer: string; text: string }
+type Message = { id: string; signer: string; text: string }
 type Card = { recipientName: string; messages: Message[] }
 
 const CONFETTI = ["🎉", "⭐", "🌟", "💛", "🩷", "🎈", "✨", "💜", "🩵", "🎊", "❤️", "💚"]
@@ -25,6 +25,8 @@ export default function CardPage() {
   const [signError, setSignError] = useState("")
   const [notFound, setNotFound] = useState(false)
   const [signing, setSigning] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editText, setEditText] = useState("")
 
   async function fetchCard() {
     const res = await fetch(`/api/cards/${id}`)
@@ -37,6 +39,23 @@ export default function CardPage() {
     const interval = setInterval(fetchCard, 5000)
     return () => clearInterval(interval)
   }, [id])
+
+  async function deleteMsg(msgId: string) {
+    if (!confirm("Delete this message?")) return
+    await fetch(`/api/cards/${id}/messages/${msgId}`, { method: "DELETE" })
+    fetchCard()
+  }
+
+  async function saveEdit(msgId: string) {
+    if (!editText.trim()) return
+    await fetch(`/api/cards/${id}/messages/${msgId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: editText }),
+    })
+    setEditingId(null)
+    fetchCard()
+  }
 
   async function sign() {
     if (!signer.trim() || !text.trim() || signing) return
@@ -127,12 +146,39 @@ export default function CardPage() {
             <div className="w-full flex flex-col gap-3 mt-2">
               {card.messages.map((m, i) => (
                 <div
-                  key={i}
+                  key={m.id ?? i}
                   className="rounded-2xl px-4 py-3 text-left"
                   style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(4px)" }}
                 >
-                  <p className="font-bold text-white text-sm">{m.signer}</p>
-                  <p className="text-pink-100 text-sm mt-0.5">{m.text}</p>
+                  <div className="flex justify-between items-center">
+                    <p className="font-bold text-white text-sm">{m.signer}</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setEditingId(m.id); setEditText(m.text) }}
+                        className="text-white opacity-70 hover:opacity-100 text-xs"
+                      >✏️</button>
+                      <button
+                        onClick={() => deleteMsg(m.id)}
+                        className="text-white opacity-70 hover:opacity-100 text-xs"
+                      >🗑️</button>
+                    </div>
+                  </div>
+                  {editingId === m.id ? (
+                    <div className="mt-1 flex flex-col gap-1">
+                      <textarea
+                        className="w-full rounded-lg px-2 py-1 text-sm text-gray-700 resize-none"
+                        rows={2}
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => saveEdit(m.id)} className="text-xs bg-white text-pink-600 font-semibold px-3 py-1 rounded-lg">Save</button>
+                        <button onClick={() => setEditingId(null)} className="text-xs text-white opacity-70">Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-pink-100 text-sm mt-0.5">{m.text}</p>
+                  )}
                 </div>
               ))}
             </div>
