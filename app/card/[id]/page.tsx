@@ -22,10 +22,13 @@ export default function CardPage() {
   const [text, setText] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [signError, setSignError] = useState("")
+  const [notFound, setNotFound] = useState(false)
 
   async function fetchCard() {
     const res = await fetch(`/api/cards/${id}`)
     if (res.ok) setCard(await res.json())
+    else if (res.status === 404) setNotFound(true)
   }
 
   useEffect(() => {
@@ -36,13 +39,19 @@ export default function CardPage() {
 
   async function sign() {
     if (!signer.trim() || !text.trim()) return
-    await fetch(`/api/cards/${id}/sign`, {
+    setSignError("")
+    const res = await fetch(`/api/cards/${id}/sign`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ signer, text }),
     })
-    setSubmitted(true)
-    fetchCard()
+    if (res.ok) {
+      setSubmitted(true)
+      fetchCard()
+    } else {
+      const data = await res.json()
+      setSignError(data.error || "Something went wrong. Please try again.")
+    }
   }
 
   function copyLink() {
@@ -51,6 +60,7 @@ export default function CardPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  if (notFound) return <div className="min-h-screen flex items-center justify-center text-gray-400">Card not found.</div>
   if (!card) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading...</div>
 
   return (
@@ -160,6 +170,7 @@ export default function CardPage() {
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
+          {signError && <p className="text-red-500 text-sm">{signError}</p>}
           <button
             onClick={sign}
             className="text-white font-bold py-2.5 rounded-xl transition-colors"
